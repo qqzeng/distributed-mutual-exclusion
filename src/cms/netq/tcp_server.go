@@ -43,7 +43,6 @@ func NewServer(port int) (Server, error) {
 	s := &server{
 		clientNum:     0,
 		chanStop:      make(chan bool, CHAN_SIZE),
-		chanOnClose:   make(chan bool, CHAN_SIZE),
 		readError:     make(chan int, CHAN_SIZE),
 		chanConnList:  make(chan net.Conn, CONN_BUFFERED_SIZE),
 		chanRespMap:   make(map[int]*compConn),
@@ -67,16 +66,14 @@ func (s *server) start() error {
 	go s.handleStuff()
 	go func() {
 		for {
-			select {
-			case <-s.chanOnClose:
-				return
-			default:
-			}
 			// fmt.Println("Server waiting for a connection.")
-			conn, err := ln.Accept()
+			if s.ln == nil {
+				return
+			}
+			conn, err := s.ln.Accept()
 			if err != nil {
-				fmt.Println("Error on accept: ", err)
-				continue
+				fmt.Println("Server error on accept: ", err)
+				return
 			}
 			s.chanConnList <- conn
 		}
@@ -90,6 +87,7 @@ func (s *server) ReadData() (int, []byte, error) {
 		case rdc := <-s.readChannel:
 			return rdc.connID, rdc.data, nil
 		case connID := <-s.readError:
+			// fmt.Printf("Server error read.\n")
 			return connID, nil, errors.New(fmt.Sprintf("server read from connection(%v) error.\n", connID))
 		}
 	}
@@ -129,13 +127,14 @@ func (s *server) handleConn(cc *compConn) {
 	for {
 		n, err := cc.conn.Read(buffer)
 		if err != nil {
-			break
+			// fmt.Printf("Server error read: %v.\n", err.Error())
+			s.readError <- cc.connID
+			s.chanConnClose <- cc.connID
+			return
 		}
 		// TODO: read error handle
 		tmpBuffer = Unpack(append(tmpBuffer, buffer[:n]...), cc.connID, s.readChannel)
 	}
-	s.chanConnClose <- cc.connID
-	s.readError <- cc.connID
 }
 
 func (s *server) handleStuff() {
@@ -145,7 +144,6 @@ func (s *server) handleStuff() {
 			for _, cc := range s.chanRespMap {
 				s.chanConnClose <- cc.connID
 			}
-			s.chanOnClose <- true
 			s.ln.Close()
 			return
 		case con := <-s.chanConnList:

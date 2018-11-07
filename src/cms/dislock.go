@@ -9,7 +9,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"os"
+	"strconv"
+	// "os"
 	// "sync"
 )
 
@@ -18,12 +19,15 @@ type dislock struct {
 	lockID int // regard it as process id.
 	port   int
 	logger *log.Logger
+
+	// sata info
+	readCnt  int
+	writeCnt int
 }
 
 func NewDislock(port, lockID int) (*dislock, error) {
 	dl := &dislock{port: port, lockID: lockID}
-	serverLogFile, _ := os.OpenFile("dislock.log", os.O_RDWR|os.O_CREATE, 0666)
-	dl.logger = log.New(serverLogFile, "[dislock] ", log.Lmicroseconds|log.Lshortfile)
+	dl.logger = CreateLog("log/dislock_"+strconv.Itoa(lockID)+".log", "[dislock] ")
 	cli, err := netq.NewClient(dl.port)
 	if err != nil {
 		dl.logger.Printf("dislock(%v) create error: %v.\n", dl.lockID, err.Error())
@@ -38,10 +42,12 @@ func (dl *dislock) Acquire(receiver int, msgContent interface{}) error {
 	// send lock request message.
 	lr := msgp.NewRequest(dl.lockID, receiver, msgContent)
 	lrBytes, _ := json.Marshal(lr)
+	dl.logger.Printf("lock(%v) send request lock message(%v) to server.\n", dl.lockID, lr.String())
 	if err := dl.cli.WriteData(lrBytes); err != nil {
 		dl.logger.Printf("lock(%v) send request message(%v) error: %v.\n", dl.lockID, lr.String(), err.Error())
 		return err
 	}
+	dl.writeCnt++
 	// wait for lock grant message
 	dl.logger.Printf("lock(%v) wait grant message from server.\n", dl.lockID)
 	lgBytes, err := dl.cli.ReadData()
@@ -49,6 +55,7 @@ func (dl *dislock) Acquire(receiver int, msgContent interface{}) error {
 		dl.logger.Printf("lock(%v) receive Grant message error: %v.\n", dl.lockID, err.Error())
 		return err
 	}
+	dl.readCnt++
 	var lg msgp.Message
 	json.Unmarshal(lgBytes, &lg)
 	if lg.MsgType == msgp.Grant {
@@ -70,6 +77,17 @@ func (dl *dislock) Release(receiver int, msgContent interface{}) error {
 		dl.logger.Printf("lock(%v) send release message(%v) error: %v.\n", dl.lockID, lrl.String(), err.Error())
 		return err
 	}
+	dl.writeCnt++
 	dl.logger.Printf("lock(%v) send release message(%v) successfully.\n", dl.lockID, lrl.String())
+	// dl.cli.Close() // close connection
+	// dl.logger.Printf("lock(%v) closed successfully.\n", dl.lockID)
+	return nil
+}
+
+// @see process.Close
+func (dl *dislock) Close() error {
+	if err := dl.cli.Close(); err != nil {
+		return err
+	}
 	return nil
 }

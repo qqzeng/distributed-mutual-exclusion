@@ -48,7 +48,7 @@ func NewRelease(sender int, receiver int, msgContent interface{}) *Message {
 	return &Message{
 		MsgID:      RandStringBytes(msgIDCnt),
 		MsgType:    Release,
-		Sender:     receiver,
+		Sender:     sender,
 		Receiver:   receiver,
 		MsgContent: msgContent,
 	}
