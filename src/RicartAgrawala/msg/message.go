@@ -47,6 +47,7 @@ func NewRequest(ts TimeStamp, sender int, receiver int, msgContent interface{}) 
 	}
 }
 
+// ts is the corresponding ts of the its request message .
 func NewReply(ts TimeStamp, sender int, receiver int, msgContent interface{}) *Message {
 	return &Message{
 		MsgID:      RandStringBytes(msgIDCnt),
