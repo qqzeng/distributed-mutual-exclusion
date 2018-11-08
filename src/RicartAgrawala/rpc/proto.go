@@ -1,5 +1,4 @@
-// This file contains constants and arguments used to perform RPCs between
-// a TribServer's local Libstore and the storage servers. DO NOT MODIFY!
+// This file contains constants and arguments used to perform RPCs between peers.
 
 package peerrpc
 
