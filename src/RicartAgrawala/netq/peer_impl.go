@@ -8,8 +8,8 @@ import (
 	"net"
 	http "net/http"
 	rpc "net/rpc"
-	"os"
-	"path/filepath"
+	// "os"
+	// "path/filepath"
 	"strconv"
 	"sync"
 	"time"
@@ -25,13 +25,6 @@ type peer struct {
 	nodePort map[int]int // nodeID => port
 	mu       sync.Mutex  // lock for normal case
 	logger   *log.Logger
-}
-
-func CreateLog(fileName, header string) *log.Logger {
-	newpath := filepath.Join(".", "log")
-	os.MkdirAll(newpath, os.ModePerm)
-	serverLogFile, _ := os.OpenFile(fileName, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
-	return log.New(serverLogFile, header, log.Lmicroseconds|log.Lshortfile)
 }
 
 // ports: nodeID => port
