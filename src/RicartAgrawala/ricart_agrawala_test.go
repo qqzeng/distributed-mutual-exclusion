@@ -108,6 +108,7 @@ func testBasic1(t *testing.T, peerCnt, msgCnt, timeout, phaseNum int) {
 	}
 	// phase 2
 	if rs.phaseNum == 2 {
+		go rs.handleTimeout()
 		// two lines below is IMPORTANT, otherwise need to synchronize code of stats counting in dislock.go.
 		wg.Wait()
 		wg.Add(peerCnt)
@@ -118,31 +119,7 @@ func testBasic1(t *testing.T, peerCnt, msgCnt, timeout, phaseNum int) {
 			go rs.runProcess(&wg, i)
 		}
 	}
-	timeoutChan := time.After(time.Duration(rs.timeout) * time.Millisecond)
-	go func() {
-		processDoneCnt := 0
-		for {
-			select {
-			case <-rs.processDone:
-				processDoneCnt++
-				if processDoneCnt == rs.peerCnt*rs.phaseNum {
-					for i := 0; i < rs.peerCnt; i++ {
-						rs.ps[i].readCnt, rs.ps[i].writeCnt = rs.ps[i].p.Stat()
-					}
-					logger.Printf("all peers tasks are done.\n")
-					// time.Sleep(500 * time.Millisecond)
-					rs.Close()
-					rs.chanStat <- true
-					return
-				}
-			case <-timeoutChan:
-				rs.Close()
-				logger.Fatalf("Test time out after %v secs.\n", rs.timeout)
-				return
-			}
-		}
-	}()
-
+	go rs.handleTimeout()
 	wg.Wait()
 	<-rs.chanStat
 	// print stats info
@@ -151,6 +128,30 @@ func testBasic1(t *testing.T, peerCnt, msgCnt, timeout, phaseNum int) {
 	rs.checkGlobalCnt()
 }
 
+func (rs *runSystem) handleTimeout() {
+	timeoutChan := time.After(time.Duration(rs.timeout) * time.Millisecond)
+	processDoneCnt := 0
+	for {
+		select {
+		case <-rs.processDone:
+			processDoneCnt++
+			if processDoneCnt == rs.peerCnt {
+				time.Sleep(500 * time.Millisecond)
+				for i := 0; i < rs.peerCnt; i++ {
+					rs.ps[i].readCnt, rs.ps[i].writeCnt = rs.ps[i].p.Stat()
+				}
+				logger.Printf("all peers tasks are done.\n")
+				rs.Close()
+				rs.chanStat <- true
+				return
+			}
+		case <-timeoutChan:
+			rs.Close()
+			logger.Fatalf("Test time out after %v secs.\n", rs.timeout)
+			return
+		}
+	}
+}
 func (rs *runSystem) Close() {
 	logger.Printf("begin to close all connections.\n")
 	for i := 0; i < rs.peerCnt; i++ {
