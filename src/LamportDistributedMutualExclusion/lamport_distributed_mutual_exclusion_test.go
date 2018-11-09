@@ -110,6 +110,7 @@ func testBasic1(t *testing.T, peerCnt, msgCnt, timeout, phaseNum int) {
 	if rs.phaseNum == 2 {
 		// two lines below is IMPORTANT, otherwise need to synchronize code of stats counting in dislock.go.
 		wg.Wait()
+		logger.Printf("Test for phase 2.\n")
 		wg.Add(peerCnt)
 		for i := 0; i < peerCnt; i++ {
 			if i%2 == 0 {
@@ -126,11 +127,11 @@ func testBasic1(t *testing.T, peerCnt, msgCnt, timeout, phaseNum int) {
 			case <-rs.processDone:
 				processDoneCnt++
 				if processDoneCnt == rs.peerCnt*rs.phaseNum {
+					time.Sleep(500 * time.Millisecond)
 					for i := 0; i < rs.peerCnt; i++ {
 						rs.ps[i].readCnt, rs.ps[i].writeCnt = rs.ps[i].p.Stat()
 					}
 					logger.Printf("all peers tasks are done.\n")
-					// time.Sleep(500 * time.Millisecond)
 					rs.Close()
 					rs.chanStat <- true
 					return
@@ -232,7 +233,7 @@ func TestLamportMutual4(t *testing.T) {
 func TestLamportMutual5(t *testing.T) {
 	phaseNum := 2
 	peerCnt := 5
-	msgCnt := 5
+	msgCnt := 10
 	timeout := 5000 * phaseNum
 	testBasic1(t, peerCnt, msgCnt, timeout, phaseNum)
 }
@@ -257,7 +258,7 @@ func TestLamportMutual8(t *testing.T) {
 	phaseNum := 2
 	peerCnt := 10
 	msgCnt := 100
-	timeout := 180000 * phaseNum
+	timeout := 180000 * phaseNum * 2
 	testBasic1(t, peerCnt, msgCnt, timeout, phaseNum)
 }
 

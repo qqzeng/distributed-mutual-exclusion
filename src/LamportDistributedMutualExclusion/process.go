@@ -61,7 +61,7 @@ func NewProcess(peerCnt, nodeID int, nodePort map[int]int) (*process, error) {
 		return nil, err
 	}
 	p.dl = dl
-	// go p.updateTSRegurlaly()
+	go p.updateTSRegurlaly()
 	return p, nil
 }
 
@@ -76,8 +76,8 @@ func (p *process) updateTSRegurlaly() {
 }
 
 func (p *process) GetTS() msgp3.TimeStamp {
-	p.mu.Lock()
-	defer p.mu.Unlock()
+	// p.mu.Lock()
+	// defer p.mu.Unlock()
 	return p.TS
 }
 

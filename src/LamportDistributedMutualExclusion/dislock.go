@@ -136,7 +136,7 @@ func (dl *dislock) lamportDistributedMutualExclusion() {
 					dl.deferProSet.PushBack(msg)
 				} else {
 					// this use global timestamp.
-					lr := msgp3.NewReply(dl.p.GetTS(), dl.nodeID, msg.Sender, msg.MsgContent.(string)+"[reply]")
+					lr := msgp3.NewReply(dl.p.GetTS()+1, dl.nodeID, msg.Sender, msg.MsgContent.(string)+"[reply]")
 					dl.sendMessage(lr)
 				}
 				dl.mu.Unlock()
@@ -145,17 +145,21 @@ func (dl *dislock) lamportDistributedMutualExclusion() {
 				dl.logger.Printf("lock(%v) receive Reply message(%v) from node(%v) by connection(%v).\n", dl.nodeID, msg.String(), msg.Sender, dl.nodeConn[msg.Sender])
 				dl.replyProSet.PushBack(msg)
 				if e := dl.checkInDeferSet(msg); e != nil {
-					dl.deferProSet.Remove(e)
 					m := e.Value.(msgp3.Message)
-					lr := msgp3.NewRelease(dl.p.GetTS(), dl.nodeID, m.Sender, m.MsgContent.(string)+"[reply]")
+					dl.logger.Printf("lock(%v) remove defer Request message(%v) from node(%v) by connection(%v).\n", dl.nodeID, m.String(), m.Sender, dl.nodeConn[m.Sender])
+					dl.deferProSet.Remove(e)
+					// m := e.Value.(msgp3.Message)
+					lr := msgp3.NewReply(dl.p.GetTS()+1, dl.nodeID, m.Sender, m.MsgContent.(string)+"[reply]")
 					dl.sendMessage(lr)
 				}
 				dl.checkNotify()
 				dl.mu.Unlock()
 			} else if msg.MsgType == msgp3.Release {
 				dl.mu.Lock()
-				dl.logger.Printf("============,len(dl.msgHeap)=%v============\n", dl.msgHeap.Len())
-				heap.Pop(dl.msgHeap)
+				dl.logger.Printf("lock(%v) receive Release message(%v) from node(%v) by connection(%v).\n", dl.nodeID, msg.String(), msg.Sender, dl.nodeConn[msg.Sender])
+				dl.logger.Printf("============,len(dl.msgHeap)=%v======[1]======\n", dl.msgHeap.Len())
+				e := heap.Pop(dl.msgHeap).(msgp3.Message)
+				dl.logger.Printf("=====[1]=======,pop message(%v)", e.String())
 				dl.checkNotify()
 				dl.mu.Unlock()
 			}
@@ -164,14 +168,11 @@ func (dl *dislock) lamportDistributedMutualExclusion() {
 }
 
 func (dl *dislock) checkNotify() {
-	// if dl.msgHeap.Len() == 0 {
-	// 	dl.waiting = false
-	// 	dl.chanAcquireLock <- true
-	// 	return
-	// }
-	if dl.replyProSet.Len() == dl.peerCnt-1 {
+	if dl.replyProSet.Len() == dl.peerCnt-1 && dl.msgHeap.Len() > 0 {
 		msg := heap.Pop(dl.msgHeap).(msgp3.Message)
+		dl.logger.Printf("=====[1]=======,pop Front message(%v) to see whether is itselft.", msg.String())
 		if msg.Sender == dl.nodeID && msg.TS == dl.requestTS {
+			dl.logger.Printf("lock(%v) has been notified.", dl.nodeID)
 			dl.waiting = false
 			heap.Push(dl.msgHeap, msg) // MUST push it back.
 			dl.chanAcquireLock <- true
@@ -239,8 +240,9 @@ func (dl *dislock) Release(releaseTS msgp3.TimeStamp, msgContent interface{}) er
 		lr := msgp3.NewRelease(releaseTS, dl.nodeID, nodeID, msgContent)
 		dl.sendMessage(lr)
 	}
-	dl.logger.Printf("============,len(dl.msgHeap)=%v============\n", dl.msgHeap.Len())
-	heap.Pop(dl.msgHeap)
+	dl.logger.Printf("============,len(dl.msgHeap)=%v=====[2]=======\n", dl.msgHeap.Len())
+	e := heap.Pop(dl.msgHeap).(msgp3.Message)
+	dl.logger.Printf("=====[1]=======,pop message(%v), and discarded it", e.String())
 	dl.logger.Printf("lock(%v) send release message to all nodes successfully.\n", dl.nodeID)
 	dl.mu.Unlock()
 	return nil
