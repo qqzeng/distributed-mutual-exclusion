@@ -13,6 +13,7 @@ In other word, all of them suffers from following limitations:
 
 ## About Test
  `TCP` (reliable) protocol is adopted to implement communication layer for all of four algorithms (`go` language). The test process consists of two separate phases:
+ 
  **Phase a**. Each process repeats the following procedures several times independently.
 
 1. Perform local operations, which sleep for an interval between [100, 300]ms.
