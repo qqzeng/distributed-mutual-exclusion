@@ -17,15 +17,15 @@ In other word, all of them suffers from following limitations:
  **Phase a**. Each process repeats the following procedures several times independently.
 
 1. Perform local operations, which sleep for an interval between [100, 300]ms.
-2. Start entering the critical section. Execute the acquisition mutex code.
-3. Execute the critical section . Accumulating a global shared variable, which randomly increases the it by a number between [1,10] every 100ms during the [100, 200] ms period. At the mean time, record these accumulated intermediate values by a global array and saving to file.
+2. Start entering the critical section. Execute the code of mutex acquisition.
+3. Execute the critical section . Accumulating a global shared variable, which randomly increases it by a number between [1,10] every 100ms during the peroid of [100, 200]ms. At the mean time, record these accumulated intermediate values by a global array and saving to file.
 4. Exit the critical section. Execute the release mutex code.
 
 **Phase b**. Each process repeats the following procedures several times independently.
 
-1. For a specific process, if the number of its PID is even, then sleep for an interval between  [100, 300]ms first, and then repeat the `Phase a` operation process. Processes with odd PID repeat the `Phase b` process directly.
+1. For a specific process, if the number of its `PID` is even, then sleep for an interval between  [100, 300]ms first, and then repeat the `Phase a` operation process. While processes with odd `PID` repeat the `Phase b` process directly.
 
-The verification of the test results of the four algorithms focuses on two aspects:
+The verification of the test results of these four algorithms focuses on two aspects:
 
 - **Algorithm correctness**. Ensure mutual access to shared resources by checking records of global arrays in `Phase a&b`. In addition, verify the access log file for the process access shared resources.
 - **Bandwidth and latency**. Count the number of messages being read and written for each process, and obtain the delay of the mutex algorithm, and calculate the average delay.
