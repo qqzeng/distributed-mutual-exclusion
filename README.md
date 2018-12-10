@@ -30,3 +30,7 @@ The verification of the test results of these four algorithms focuses on two asp
 - **Algorithm correctness**. Ensure mutual access to shared resources by checking records of global arrays in `Phase a&b`. In addition, verify the access log file for the process access shared resources.
 - **Bandwidth and latency**. Count the number of messages being read and written for each process, and obtain the delay of the mutex algorithm, and calculate the average delay.
 
+## Reference
+- Ricart G, Agrawala A K. An Algorithm for Mutual Exclusion in Computer Networks[R]. MARYLAND UNIV COLLEGE PARK DEPT OF COMPUTER SCIENCE, 1980.
+- Lamport L. Time, clocks, and the ordering of events in a distributed system[J]. Communications of the ACM, 1978, 21(7): 558-565.
+- CMU Distributed System Lecture.
